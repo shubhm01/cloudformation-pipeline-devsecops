@@ -1,0 +1,71 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Create an AWS CodeBuild Project with CodeCommit Integration and Secret Manager Access
+
+Parameters:
+  RepositoryUrl:
+    Type: String
+    Description: URL of the CodeCommit repository
+  SecretArn:
+    Type: String
+    Description: ARN of the secret in Secrets Manager
+
+Resources:
+  DevSecOpsCodeBuildRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: CodeBuildRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: CodeBuildPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: 'arn:aws:logs:*:*:*'
+              - Effect: Allow
+                Action:
+                  - codecommit:GitPull
+                Resource: '*'
+  DevSecOpsCodeBuildProject:
+    Type: 'AWS::CodeBuild::Project'
+    Properties:
+      Name: DevSecOps_DAST_Scan_Build_CF
+      ServiceRole: !GetAtt DevSecOpsCodeBuildRole.Arn
+      Source:
+        Type: CODECOMMIT
+        Location: !Ref RepositoryUrl
+        GitCloneDepth: 1
+        BuildSpec: 'buildspec.yml'
+      SourceVersion: refs/heads/main
+      Artifacts:
+        Type: NO_ARTIFACTS
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:4.0
+        EnvironmentVariables:
+          - Name: SECRET_ARN
+            Value: !Ref SecretArn
+Outputs:
+  DevSecOpsCodeBuildProjectName:
+    Description: Name of the CodeBuild project
+    Value: !Ref DevSecOpsCodeBuildProject
