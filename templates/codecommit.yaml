@@ -1,0 +1,8 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Create an AWS Code Commit Repository for DAST Scan in DEVSECOPS pipeline
+
+Resources: 
+  DevSecOpsCodeCommitRepository: 
+    Type: 'AWS::CodeCommit::Repository'
+    Properties:
+      RepositoryName: DevSecOps_DAST_Scan_Repo_CF
